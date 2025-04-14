@@ -1,5 +1,4 @@
-# 📦 Step 1: Install & Import Libraries
-!pip install streamlit nltk scikit-learn pandas
+
 
 import streamlit as st
 import pandas as pd
