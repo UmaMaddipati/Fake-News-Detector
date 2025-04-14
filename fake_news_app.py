@@ -1,5 +1,3 @@
-
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -11,27 +9,13 @@ from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
+# Download NLTK stopwords (only the first time)
 nltk.download('stopwords')
 
-# 🧹 Step 2: Preprocess Text
-stop_words = set(stopwords.words('english'))
-stemmer = PorterStemmer()
-
-def clean_text(text):
-    text = text.lower()
-    text = re.sub(r'\[.*?\]', '', text)
-    text = re.sub(r'http\S+|www.\S+', '', text)
-    text = re.sub(r'<.*?>+', '', text)
-    text = re.sub(r'[^a-zA-Z\s]', '', text)
-    text = text.translate(str.maketrans('', '', string.punctuation))
-    words = text.split()
-    words = [stemmer.stem(word) for word in words if word not in stop_words]
-    return " ".join(words)
-
-# 📁 Step 3: Load Model & Vectorizer
-@st.cache(allow_output_mutation=True)
-def load_model():
-    # Load pre-trained model and vectorizer (can be done using pickle or joblib)
+# Load and preprocess dataset
+@st.cache_resource
+def load_data_and_train():
+    # Load CSV files (make sure these are in the same folder)
     true_df = pd.read_csv("True.csv")
     fake_df = pd.read_csv("Fake.csv")
 
@@ -41,35 +25,51 @@ def load_model():
     df = pd.concat([true_df, fake_df], ignore_index=True)
     df = df.sample(frac=1, random_state=42).reset_index(drop=True)
 
+    stop_words = set(stopwords.words('english'))
+    stemmer = PorterStemmer()
+
+    def clean_text(text):
+        text = text.lower()
+        text = re.sub(r'\[.*?\]', '', text)
+        text = re.sub(r'http\S+|www.\S+', '', text)
+        text = re.sub(r'<.*?>+', '', text)
+        text = re.sub(r'[^a-zA-Z\s]', '', text)
+        text = text.translate(str.maketrans('', '', string.punctuation))
+        words = text.split()
+        words = [stemmer.stem(word) for word in words if word not in stop_words]
+        return " ".join(words)
+
     df['clean_text'] = df['text'].apply(clean_text)
 
+    # Vectorization
     vectorizer = TfidfVectorizer(max_features=5000)
     X = vectorizer.fit_transform(df['clean_text'])
     y = df['label']
 
+    # Train the model
     model = LogisticRegression()
     model.fit(X, y)
 
-    return model, vectorizer
+    return model, vectorizer, clean_text
 
-model, vectorizer = load_model()
+# Load model and vectorizer
+model, vectorizer, clean_text = load_data_and_train()
 
-# 📱 Step 4: Streamlit UI
-st.title("Fake News Detection")
-st.write("Enter the text of a news article to check if it's real or fake.")
+# Streamlit UI
+st.title("📰 Fake News Detector")
+st.write("Enter a news article and the model will predict if it's real or fake.")
 
-news_input = st.text_area("Enter News Text:")
+user_input = st.text_area("📝 Enter News Text")
 
 if st.button("Predict"):
-    if news_input:
-        cleaned_text = clean_text(news_input)
-        vectorized_input = vectorizer.transform([cleaned_text])
-
-        prediction = model.predict(vectorized_input)
+    if user_input.strip() == "":
+        st.warning("Please enter some news text.")
+    else:
+        cleaned = clean_text(user_input)
+        vectorized = vectorizer.transform([cleaned])
+        prediction = model.predict(vectorized)[0]
 
         if prediction == 1:
-            st.success("✅ This news is REAL!")
+            st.success("✅ This news is **REAL**.")
         else:
-            st.error("❌ This news is FAKE!")
-    else:
-        st.warning("Please enter a news article to predict.")
+            st.error("🚨 This news is **FAKE**.")
