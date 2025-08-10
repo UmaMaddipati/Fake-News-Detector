@@ -9,13 +9,13 @@ from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
-# Download NLTK stopwords (only the first time)
+# Download NLTK stopwords 
 nltk.download('stopwords')
 
 # Load and preprocess dataset
 @st.cache_resource
 def load_data_and_train():
-    # Load CSV files (make sure these are in the same folder)
+    # Load CSV files 
     true_df = pd.read_csv("True.csv")
     fake_df = pd.read_csv("Fake.csv")
 
@@ -55,7 +55,7 @@ def load_data_and_train():
 # Load model and vectorizer
 model, vectorizer, clean_text = load_data_and_train()
 
-# Streamlit UI
+
 st.title("📰 Fake News Detector")
 st.write("Enter a news article and the model will predict if it's real or fake.")
 
